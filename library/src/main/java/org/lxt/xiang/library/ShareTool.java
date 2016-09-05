@@ -1,14 +1,13 @@
 package org.lxt.xiang.library;
 
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.support.annotation.Nullable;
-import android.util.Log;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * It is never too late to learn.
@@ -23,82 +22,79 @@ public class ShareTool {
     private static final String PUT_PUT = "put";
     private static final String PUT_SAVE = "save";
 
+    private static Settings settings = Settings.getInstance();
+    private static Map<Method, ShareMethod> mShareMethodCache = new HashMap<>();
+
     public static <T> T create(final Context context, final Class<T> cls) {
         validateServiceInterface(cls);
         return (T) Proxy.newProxyInstance(cls.getClassLoader(), new Class[]{cls}, new InvocationHandler() {
             @Override
             public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                //1.解析方法，处理注解，提取信息
-                //2.缓存方法，避免反射
-                //3.利用信息实现功能
-                Annotation[] annotations = method.getAnnotations();
-                for (Annotation anno : annotations) {
-                    if (anno instanceof GET) {
-                        Object key = handleGET(method, (GET) anno, context);
-                        if (key != null) return key;
-                    } else if (anno instanceof PUT) {
-                        handlePut(method, args, (PUT) anno, context);
-                    }
-                }
-                return null;
+                ShareMethod shareMethod = loadShareMethod(method,args);
+                Handler handler = new Handler(shareMethod, context);
+                return handler.call();
             }
         });
 
     }
 
-    private static void handlePut(Method method, Object[] args, PUT anno, Context context) {
-        PUT put = anno;
-        String key = put.key();
-        if (key.isEmpty() || key.trim().isEmpty()) {
-            key = method.getName();
-            if (key.startsWith(PUT_PUT)) {
-                key = key.replaceFirst(PUT_PUT, "").toUpperCase();
-            } else if(key.startsWith(PUT_SAVE)){
-                key = key.replaceFirst(PUT_SAVE, "").toUpperCase();
+    private static ShareMethod loadShareMethod(Method method, Object[] args) {
+        ShareMethod shareMethod = mShareMethodCache.get(method);
+        if(shareMethod==null){
+            Annotation[] annotations = method.getAnnotations();
+            for (Annotation anno : annotations) {
+                shareMethod = handleAnno(anno,method,args);
+                if (shareMethod != null) {
+                    mShareMethodCache.put(method,shareMethod);
+                    return shareMethod;
+                }
             }
         }
-        if (!key.isEmpty()) {
-             Log.i(TAG, "------------------------------");
-             Log.i(TAG, "------------------------------");
-            Log.i(TAG, "handlePut  : " + key);
-            SharedPreferences prefs = context.getSharedPreferences(SHARE_FILE_NAME, Context.MODE_PRIVATE);
-            SharedPreferences.Editor editor = prefs.edit();
-            if (args.length == 0) return ;
-            Object firstArgs = args[0];
-            Class firstCls = firstArgs.getClass();
-            Log.i(TAG, "handlePut: " + firstArgs.toString());
-            Log.i(TAG, "handlePut: " + firstArgs.getClass().getSimpleName());
-            Log.i(TAG, "handlePut: " + (firstCls == Integer.class));
-            if (firstCls == String.class) {
-                editor.putString(key, (String) firstArgs);
-            } else if (firstCls == Integer.class) {
-                editor.putInt(key, ((Integer)firstArgs).intValue());
-            }
-            editor.commit();
-        }
+        return shareMethod;
     }
 
-    @Nullable
-    private static Object handleGET(Method method, GET anno, Context context) {
-        GET get = anno;
-        String key = get.key();
-        if (key.isEmpty() || key.trim().isEmpty()) {
-            key = method.getName();
-            if (key.startsWith(GET_GET)) {
-                key = key.replaceFirst(GET_GET, "").toUpperCase();
-            }
+    private static ShareMethod handleAnno(Annotation anno, Method method, Object[] args) {
+        ShareMethod shareMethod = null;
+        if(anno instanceof GET){
+            GET get = (GET) anno;
+            String key = getOptKey(get,method);
+            shareMethod = new ShareMethod(ShareMethod.READ, key, method, args);
+        } else if(anno instanceof PUT){
+            PUT put = (PUT) anno;
+            String key = getOptKey(put,method);
+            shareMethod = new ShareMethod(ShareMethod.WRITE, key, method, args);
         }
-        if (!key.isEmpty()) {
-            SharedPreferences prefs = context.getSharedPreferences(SHARE_FILE_NAME, Context.MODE_PRIVATE);
-            Class returnCls = method.getReturnType();
-            if (returnCls == String.class) {
-                return prefs.getString(key, "default value");
-            } else if (returnCls == int.class) {
-                return prefs.getInt(key, 999);
-            }
-        }
-        return null;
+        return shareMethod;
     }
+
+    private static String getOptKey(PUT put, Method method) {
+        String key = put.key();
+        if(key.trim().isEmpty()){
+            key = method.getName();
+            for (String prefix : settings.getPUT_PREFIX()) {
+                if(key.startsWith(prefix)){
+                    key = key.replace(prefix,"").toUpperCase();
+                    return key;
+                }
+            }
+        }
+        return key;
+    }
+
+    private static String getOptKey(GET get, Method method) {
+        String key = get.key();
+        if(key.trim().isEmpty()){
+            key = method.getName();
+            for (String prefix : settings.getGET_PREFIX()) {
+                if(key.startsWith(prefix)){
+                    key = key.replace(prefix,"").toUpperCase();
+                    return key;
+                }
+            }
+        }
+        return key;
+    }
+
 
     static <T> void validateServiceInterface(Class<T> service) {
         if (!service.isInterface()) {
@@ -106,6 +102,14 @@ public class ShareTool {
         } else if (service.getInterfaces().length > 0) {
             throw new IllegalArgumentException("API interfaces must not extend other interfaces.");
         }
+    }
+
+    public void addGetPrefix(final String prefix){
+        settings.addGetPrefix(prefix);
+    }
+
+    public void addPutPrefix(final String prefix){
+        settings.addPutPrefix(prefix);
     }
 
 }
