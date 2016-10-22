@@ -1,6 +1,7 @@
 package org.lxt.xiang.knife;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
@@ -8,7 +9,8 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.widget.TextView;
 
-import org.lxt.xiang.library.ShareTool;
+import java.util.Map;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -27,6 +29,14 @@ public class MainActivity extends AppCompatActivity {
         ab.setHomeAsUpIndicator(R.drawable.ic_menu);
         ab.setDisplayHomeAsUpEnabled(true);
 
+        SharedPreferences preferences = null;
+        boolean aBoolean =  preferences.getBoolean("",false);
+        float aFloat =  preferences.getFloat("", -1);
+        int anInt =  preferences.getInt("", 1);
+        long aLong =  preferences.getLong("", 1);
+        String string =  preferences.getString("", "");
+        Set<String> set =  preferences.getStringSet("", null);
+        Map<String, ?> map =  preferences.getAll();
         initViews(this);
     }
 

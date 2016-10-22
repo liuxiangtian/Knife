@@ -3,9 +3,6 @@ package org.lxt.xiang.knife;
 import org.lxt.xiang.library.GET;
 import org.lxt.xiang.library.PUT;
 
-/**
- * It is never too late to learn.
- */
 public interface PrefsApi {
 
     @GET

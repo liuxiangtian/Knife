@@ -5,12 +5,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * It is never too late to learn.
- */
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target({ElementType.METHOD})
 public @interface PUT {
     String key() default "";
+    boolean async() default true;
 }
