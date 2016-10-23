@@ -117,6 +117,7 @@ public class MethodInfo {
         }
 
         public Builder setReturnType(Class returnType) {
+            methodInfo.setReturnType(returnType);
             return this;
         }
 
