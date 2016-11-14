@@ -32,6 +32,9 @@ public class MainActivity extends AppCompatActivity {
         prefsApi.putType("Harry Potty");
         String name = prefsApi.getTheme("Dark");
         Log.i(TAG, "initViews: " + name);
+        prefsApi.putType("JK LUOLIN");
+        name = prefsApi.getTheme("Dark");
+        Log.i(TAG, "initViews: " + name);
     }
 
     @Override
@@ -39,6 +42,5 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.main_menu,menu);
         return super.onCreateOptionsMenu(menu);
     }
-
 
 }
